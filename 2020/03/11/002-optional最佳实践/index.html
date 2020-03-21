@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/find.png">
+  <link rel="icon" type="image/png" href="/img/find.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="description" content="everyone is a hero">
+  <meta name="author" content="Zhang Yi">
+  <meta name="keywords" content="">
+  <title>Java 8 Optional最佳实践 ~ Her0</title>
+
+  <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css"  >
+<link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css"  >
+<link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css"  >
+<link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css"  >
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1067060_qzomjdt8bmp.css">
+
+
+
+  <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css"  >
+
+<link rel="stylesheet" href="/css/main.css"  >
+
+
+  <link rel="stylesheet" href="/lib/fancybox/jquery.fancybox.min.css"  >
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>Her0</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/">首页</a>
+          </li>
+        
+          
+          
+          
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/archives/">归档</a>
+          </li>
+        
+          
+          
+          
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/categories/">分类</a>
+          </li>
+        
+          
+          
+          
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/tags/">标签</a>
+          </li>
+        
+          
+          
+          
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/about/">关于</a>
+          </li>
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="view intro-2" id="background" false
+         style="background: url('/img/002-doors.jpg')no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+          <div class="container text-center white-text fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+
+            
+              <br>
+              
+                <p class="mt-3">
+                  <i class="fas fa-calendar-alt" aria-hidden="true"></i>&nbsp;
+                  星期三, 三月 11日 2020, 8:00 晚上
+                </p>
+              
+
+              <p>
+                
+                  
+                  &nbsp;<i class="far fa-chart-bar"></i>
+                  <span class="post-count">
+                    2.3k 字
+                  </span>&nbsp;
+                
+
+                
+                  
+                  &nbsp;<i class="far fa-clock"></i>
+                  <span class="post-count">
+                      9 分钟
+                  </span>&nbsp;
+                
+
+                
+                  <!-- 不蒜子统计文章PV -->
+                  
+                  &nbsp;<i class="far fa-eye" aria-hidden="true"></i>&nbsp;
+                  <span id="busuanzi_container_page_pv">
+                    <span id="busuanzi_value_page_pv"></span> 次
+                  </span>&nbsp;
+                
+              </p>
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-md">
+      <div class="py-5 z-depth-3" id="board">
+        <div class="post-content mx-auto" id="post">
+          <div class="markdown-body">
+            <p>Java从1.8之后引入了optional API，用以一定程度地避免NPE（<em>NullPointerException</em>）。然而可能很多人对这个精心设计的API还没那么熟练，甚至会有一些滥用。下面会详细讨论，然后给出我所认为的最佳实践。</p>
+<h2 id="来自作者的说明"><a href="#来自作者的说明" class="headerlink" title="来自作者的说明"></a>来自作者的说明</h2><p>首先我们来看一下<code>Optional</code>的作者Brian Goetz对这个API的说明：</p>
+<blockquote>
+<p>Our intention was to provide a limited mechanism for library method return types where there needed to be a clear way to represent “no result”, and using <code>null</code> for such was overwhelmingly likely to cause errors.</p>
+</blockquote>
+<p>大意为，为了避免<code>null</code>带来的错误，我们提供了一个可以<strong>明确</strong>表示空值的有限的机制。</p>
+<h2 id="基础理解"><a href="#基础理解" class="headerlink" title="基础理解"></a>基础理解</h2><p>首先，<code>Optional</code>是一个容器，用于放置可能为空的值，它可以合理而优雅的处理<code>null</code>。众所周知，<code>null</code>在编程历史上极具话题性，号称是<em>计算机历史上最严重的错误</em>，感兴趣可以读一下这篇文章：<strong><a href="https://www.lucidchart.com/techblog/2015/08/31/the-worst-mistake-of-computer-science/" target="_blank" rel="noopener">THE WORST MISTAKE OF COMPUTER SCIENCE</a></strong>，这里暂且不做过多讨论。在Java 1.8之前的版本，没有可以用于表示<code>null</code>官方API，如果你足够的谨慎，你可能需要常常在代码中做如下的判断：</p>
+<pre><code class="java">if (null != user) {
+    //doing something
+}
+if (StringUtil.isEmpty(string)) {
+    //doing something
+}</code></pre>
+<p>确实，返回值是<code>null</code>的情况太多了，一不小心，就会产生NPE，接踵而来的就是应用运行终止，产品抱怨，用户投诉。</p>
+<p>1.8之后，jdk新增了<code>Optional</code>来表示空结果。其实本质上什么也没变，只是增加了一个表达方式。<code>Optional</code>表示空的静态方法为<code>Optional.empty()</code>，跟<code>null</code>有什么本质区别吗？其实没有。翻看它的实现，<code>Optional</code>中的value就是<code>null</code>，只不过包了一层<code>Optional</code>，所以说它其实是个容器。用之后的代码可能长这样：</p>
+<pre><code class="java">// 1
+Optional&lt;User&gt; optionalUser = RemoteService.getUser();
+if (!optionalUser.isPresent()) {
+   //doing something 
+}
+User user = optionalUser.get();
+
+// 2
+User user = optionalUser.get().orElse(new User());</code></pre>
+<p>看起来，好像比之前好了一些，至少看起来没那么笨。但如果采用写法1，好像更啰嗦了。</p>
+<p>如果你对kotlin稍有了解，kotlin的非空类型是他们大肆宣传的”卖点”之一，通过<code>var param!!</code>在使用它的地方做强制的空检查，否则无法通过编译，最大程度上减少了NPE。其实在我看来，<code>Optional</code>的方式更加优雅和灵活。同时，<code>Optional</code>也可能会带来一些误解。</p>
+<p>下面先说一些在我看来的不合适的使用：</p>
+<h2 id="Bad-Practice"><a href="#Bad-Practice" class="headerlink" title="Bad Practice"></a>Bad Practice</h2><h4 id="1-直接使用isPresent-进行if检查"><a href="#1-直接使用isPresent-进行if检查" class="headerlink" title="1. 直接使用isPresent()进行if检查"></a>1. 直接使用isPresent()进行if检查</h4><p>这个直接参考上面的例子，用<code>if</code>判断和1.8之前的写法并没有什么区别，反而返回值包了一层<code>Optional</code>，增加了代码的复杂性，没有带来任何实质的收益。其实<code>isPresent()</code>一般用于流处理的结尾，用于判断是否符合条件。</p>
+<pre><code class="java">list.stream()
+    .filer(x -&gt; Objects.equals(x,param))
+    .findFirst()
+    .isPresent()</code></pre>
+<h4 id="2-在方法参数中使用Optional"><a href="#2-在方法参数中使用Optional" class="headerlink" title="2. 在方法参数中使用Optional"></a>2. 在方法参数中使用Optional</h4><p>我们用一个东西之前得想明白，这东西是为解决什么问题而诞生的。<code>Optional</code>直白一点说就是为了表达可空性，如果方法参数可以为空，为何不重载呢？包括使用构造函数也一样。重载的业务表达更加清晰直观。</p>
+<pre><code class="java">//don&#39;t write method like this
+public void getUser(long uid,Optional&lt;Type&gt; userType);
+
+//use Overload
+public void getUser(long uid) {
+    getUser(uid,null);
+}
+public void getUser(long uid,UserType userType) {
+    //doing something
+}
+</code></pre>
+<h4 id="3-直接使用Optional-get"><a href="#3-直接使用Optional-get" class="headerlink" title="3. 直接使用Optional.get"></a>3. 直接使用Optional.get</h4><p><code>Optional</code>不会帮你做任何的空判断或者异常处理，如果直接在代码中使用<code>Optional.get()</code>和不做任何空判断一样，十分危险。这种可能会出现在那种所谓的着急上线，着急交付，对<code>Optional</code>也不是很熟悉，直接就用了。这里多说一句，可能有人会反问了：甲方/业务着急，需求又多，哪有时间给他去做优化啊？因为我在现实工作中遇到过，但这两者并不矛盾，因为代码行数上差别并不大，只要自己平时保持学习，都是信手拈来的东西。</p>
+<h4 id="4-使用在POJO中"><a href="#4-使用在POJO中" class="headerlink" title="4. 使用在POJO中"></a>4. 使用在POJO中</h4><p>估计很少有人这么用：</p>
+<pre><code class="java">public class User {
+    private int age;
+    private String name;
+    private Optional&lt;String&gt; address;
+}</code></pre>
+<p>这样的写法将会给序列化带来麻烦，<code>Optional</code>本身并没有实现序列化，现有的JSON序列化框架也没有对此提供支持的。</p>
+<h4 id="5-使用在注入的属性中"><a href="#5-使用在注入的属性中" class="headerlink" title="5. 使用在注入的属性中"></a>5. 使用在注入的属性中</h4><p>这种写法估计用的人会更少，但不排除有脑洞的。</p>
+<pre><code class="java">public class CommonService {
+    private Optional&lt;UserService&gt; userService;
+
+    public User getUser(String name) {
+        return userService.ifPresent(u -&gt; u.findByName(name));
+    }
+}</code></pre>
+<p>首先依赖注入大多在spring的框架之下，直接使用<code>@Autowired</code>很方便。但如果使用以上的写法，如果<code>userService</code>set失败了，程序就应该终止并报异常，并不是无声无息，让其看起来什么问题都没有。</p>
+<h2 id="Best-and-Pragmatic-Practice"><a href="#Best-and-Pragmatic-Practice" class="headerlink" title="Best and Pragmatic Practice"></a>Best and Pragmatic Practice</h2><h3 id="API"><a href="#API" class="headerlink" title="API"></a>API</h3><p>在说最佳实践前，让我们来看一下<code>Optional</code>都提供了哪些常用API。</p>
+<h4 id="1-empty"><a href="#1-empty" class="headerlink" title="1. empty()"></a>1. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#empty--" target="_blank" rel="noopener">empty</a></strong>()</h4><p>返回一个<code>Optional</code>容器对象，而不是null。<strong>建议常用⭐⭐⭐⭐</strong></p>
+<h4 id="2-of-T-value"><a href="#2-of-T-value" class="headerlink" title="2. of(T value)"></a>2. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#of-T-" target="_blank" rel="noopener">of</a>(T value)</strong></h4><p>创建一个<code>Optional</code>对象，如果value是null，则抛出NPE。<strong>不建议用⭐⭐</strong></p>
+<h4 id="3-ofNullable-T-value"><a href="#3-ofNullable-T-value" class="headerlink" title="3. ofNullable(T value)"></a>3. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#ofNullable-T-" target="_blank" rel="noopener">ofNullable</a>(T value)</strong></h4><p>同上，创建一个<code>Optional</code>对象，但value为空时返回<code>Optional.empty()</code>。<strong>推荐使用⭐⭐⭐⭐⭐</strong></p>
+<h4 id="4-get"><a href="#4-get" class="headerlink" title="4. get()"></a>4. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#get--" target="_blank" rel="noopener">get()</a></strong></h4><p>返回<code>Optional</code>中包装的值，在判空之前，千万不要直接使用！<strong>尽量别用！⭐</strong></p>
+<h4 id="5-orElse-T-other"><a href="#5-orElse-T-other" class="headerlink" title="5. orElse(T other)"></a>5. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#orElse-T-" target="_blank" rel="noopener">orElse</a>(<a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html" target="_blank" rel="noopener">T</a> other)</strong></h4><p>同样是返回<code>Optional</code>中包装的值，但不同的是当取不到值时，返回你指定的default。<strong>看似很好，但不建议用⭐⭐</strong></p>
+<h4 id="6-orElseGet-Supplier-lt-extends-T-gt-other"><a href="#6-orElseGet-Supplier-lt-extends-T-gt-other" class="headerlink" title="6. orElseGet(Supplier&lt;? extends T&gt; other)"></a>6. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#orElseGet-java.util.function.Supplier-" target="_blank" rel="noopener">orElseGet</a>(<a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Supplier.html" target="_blank" rel="noopener">Supplier</a>&lt;? extends <a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html" target="_blank" rel="noopener">T</a>&gt; other)</strong></h4><p>同样是返回<code>Optional</code>中包装的值，取不到值时，返回你指定的default。<strong>看似和5一样，但推荐使用⭐⭐⭐⭐⭐</strong></p>
+<h4 id="7-orElseThrow-Supplier-lt-extends-X-gt-exceptionSupplier"><a href="#7-orElseThrow-Supplier-lt-extends-X-gt-exceptionSupplier" class="headerlink" title="7. orElseThrow(Supplier&lt;? extends X&gt; exceptionSupplier)"></a>7. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#orElseThrow-java.util.function.Supplier-" target="_blank" rel="noopener">orElseThrow</a>(<a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Supplier.html" target="_blank" rel="noopener">Supplier</a>&lt;? extends X&gt; exceptionSupplier)</strong></h4><p>返回<code>Optional</code>中包装的值，取不到值时抛出指定的异常。<strong>阻塞性业务场景推荐使用⭐⭐⭐⭐</strong></p>
+<h4 id="8-isPresent"><a href="#8-isPresent" class="headerlink" title="8. isPresent()"></a>8. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#isPresent--" target="_blank" rel="noopener">isPresent</a></strong>()</h4><p>判断<code>Optional</code>中是否有值，返回boolean，某些情况下很有用，但尽量不要用在if判断体中。<strong>可以用⭐⭐⭐</strong></p>
+<h4 id="9-ifPresent-Consumer-lt-super-T-gt-consumer"><a href="#9-ifPresent-Consumer-lt-super-T-gt-consumer" class="headerlink" title="9. ifPresent(Consumer&lt;? super T&gt; consumer)"></a>9. <strong><a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html#ifPresent-java.util.function.Consumer-" target="_blank" rel="noopener">ifPresent</a>(<a href="https://docs.oracle.com/javase/8/docs/api/java/util/function/Consumer.html" target="_blank" rel="noopener">Consumer</a>&lt;? super <a href="https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html" target="_blank" rel="noopener">T</a>&gt; consumer)</strong></h4><p>判断<code>Optional</code>中是否有值，有值则执行consumer，否则什么都不干。<strong>日常情况下请使用这个⭐⭐⭐⭐</strong></p>
+<h3 id="TIPS"><a href="#TIPS" class="headerlink" title="TIPS"></a>TIPS</h3><p>首先是一些基本原则：</p>
+<ul>
+<li>不要声明任何<code>Optional</code>实例属性</li>
+<li>不要在任何setter或者构造方法中使用<code>Optional</code></li>
+<li><code>Optional</code>属于返回类型，在业务返回值或者远程调用中使用</li>
+</ul>
+<h4 id="1-业务上需要空值时，不要直接返回null，使用Optional-empty"><a href="#1-业务上需要空值时，不要直接返回null，使用Optional-empty" class="headerlink" title="1. 业务上需要空值时，不要直接返回null，使用Optional.empty()"></a>1. 业务上需要空值时，不要直接返回null，使用<code>Optional.empty()</code></h4><pre><code class="java">public Optional&lt;User&gt; getUser(String name) {
+    if (StringUtil.isNotEmpty(name)) {
+        return RemoteService.getUser(name);
+    } 
+    return Optional.empty();
+}</code></pre>
+<h4 id="2-使用orElseGet"><a href="#2-使用orElseGet" class="headerlink" title="2. 使用orElseGet()"></a>2. 使用orElseGet()</h4><p>获取value有三种方式：<code>get()</code> <code>orElse()</code> <code>orElseGet()</code>。这里推荐在需要用到的地方只用 <code>orElseGet()</code>。</p>
+<p>首先，<code>get()</code>不能直接使用，需要结合判空使用。这和<code>!=null</code>其实没多大区别，只是在表达和抽象上有所改善。</p>
+<p>其次，为什么不推荐<code>orElse()</code>呢？因为<code>orElse()</code>无论如何都会执行括号中的内容， <code>orElseGet()</code>只在主体value是空时执行，下面看个例子：</p>
+<pre><code class="java">public String getName() {
+    System.out.print(&quot;method called&quot;);
+}
+
+String name1 = Optional.of(&quot;String&quot;).orElse(getName()); //output: method called
+String name2 = Optional.of(&quot;String&quot;).orElse(() -&gt; getName()); //output:</code></pre>
+<p>如果上面的例子<code>getName()</code>方法是一个远程调用，或者涉及大量的文件IO，代价可想而知。</p>
+<p>但 <code>orElse()</code>就一无是处吗？并不是。<code>orElseGet()</code>需要构建一个<code>Supplier</code>，如果只是简单的返回一个静态资源、字符串等等，直接返回<strong>静态</strong>资源即可。</p>
+<pre><code class="java">
+public static final String USER_STATUS = &quot;UNKNOWN&quot;;
+...
+public String findUserStatus(long id) {
+    Optional&lt;String&gt; status = ... ; // 
+    return status.orElse(USER_STATUS);
+}
+
+//不要这么写
+public String findUserStatus(long id) {
+    Optional&lt;String&gt; status = ... ; // 
+    return status.orElse(&quot;UNKNOWN&quot;);//这样每次都会新建一个String对象
+}</code></pre>
+<h4 id="3-使用orElseThrow"><a href="#3-使用orElseThrow" class="headerlink" title="3. 使用orElseThrow()"></a>3. 使用orElseThrow()</h4><p>这个针对阻塞性的业务场景比较合适，例如没有从上游获取到用户信息，下面的所有操作都无法进行，那此时就应该抛出异常。正常的写法是先判空，再手动throw异常，现在可以集成为一行：</p>
+<pre><code class="java">public String findUser(long id) {
+    Optional&lt;User&gt; user = remoteService.getUserById(id) ;
+    return user.orElseThrow(IllegalStateException::new);
+}</code></pre>
+<h4 id="4-不为空则执行时，使用ifPresent"><a href="#4-不为空则执行时，使用ifPresent" class="headerlink" title="4. 不为空则执行时，使用ifPresent()"></a>4. 不为空则执行时，使用ifPresent()</h4><p>这点没有性能上的优势，但可以使代码更简洁：</p>
+<pre><code class="java">//之前是这样的
+if (status.isPresent()) {
+    System.out.println(&quot;Status: &quot; + status.get());
+}
+
+//现在
+status.ifPresent(System.out::println);</code></pre>
+<h4 id="5-不要滥用"><a href="#5-不要滥用" class="headerlink" title="5. 不要滥用"></a>5. 不要滥用</h4><p>有些简单明了的方法，完全没必要增加<code>Optional</code>来增加复杂性。</p>
+<pre><code class="java">public String fetchStatus() {
+    String status = getStatus() ;
+    return Optional.ofNullable(status).orElse(&quot;PENDING&quot;);
+}
+
+//判断一个简单的状态而已
+public String fetchStatus() {
+    String status = ... ;
+    return status == null ? &quot;PENDING&quot; : status;
+}</code></pre>
+<h4 id="6-不要在集合中使用Optional"><a href="#6-不要在集合中使用Optional" class="headerlink" title="6. 不要在集合中使用Optional"></a>6. 不要在集合中使用Optional</h4><p>首先，null可以作为集合的元素之一，它并不是非法的；其次，集合类型本身已经具备了完整的空表达，再去包装一层<code>Optional</code>也是徒增复杂，收益甚微。例如，map已经有了<code>getOrDefault()</code>这样的类似<code>orElse()</code>的API了。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><code>Optional</code>的出现使Java对null的表达能力更近了一步，好马配好鞍，合理使用可以避免大量的NPE，节省大量的人力物力。以上内容也是本人查询了很多资料，边学边写的产出，如有错漏之处，还请不吝指教。</p>
+
+            <hr>
+          </div>
+          <br>
+          <div>
+            <p>
+            
+            
+              <span>
+                <i class="iconfont icon-tag"></i>
+                
+                  <a class="hover-with-bg" href="/tags/Java">Java</a>
+                
+              </span>
+            
+            </p>
+            
+              <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a href="https://zh.wikipedia.org/wiki/Wikipedia:CC_BY-SA_3.0%E5%8D%8F%E8%AE%AE%E6%96%87%E6%9C%AC" target="_blank" rel="nofollow noopener noopener">CC BY-SA 3.0协议</a> 。转载请注明出处！</p>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="d-none d-lg-block col-lg-2 toc-container">
+      
+  <div id="toc">
+    <p class="h4"><i class="far fa-list-alt"></i>&nbsp;目录</p>
+    <div id="tocbot"></div>
+  </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="col-lg-7 mx-auto nopadding-md">
+  <div class="container comments mx-auto" id="comments">
+    
+      <br><br>
+      
+      
+  <div id="vcomments" style="width: 90%; margin: 0 auto;"></div>
+  <script defer src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script defer src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+  <script>
+    var notify = 'false' === true;
+    var verify = 'false' === true;
+    var oldLoad = window.onload;
+    window.onload = function () {
+      new Valine({
+        el: '#vcomments',
+        notify: notify,
+        verify: verify,
+        app_id: "CSC6DEShmfwVc5hhMnJBk7aq-gzGzoHsz",
+        app_key: "tRlRrIaC5r8XocQkODEbzQSS",
+        placeholder: "说点什么",
+        avatar: "retro",
+        meta: ['nick', 'mail', 'link'],
+        pageSize: "10",
+      });
+      oldLoad && oldLoad();
+    };
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://valine.js.org" target="_blank" rel="nofollow noopener noopener">comments
+      powered by Valine.</a></noscript>
+
+
+    
+  </div>
+</div>
+
+    
+  </main>
+
+  
+    <a class="z-depth-1" id="scroll-top-button" href="#" role="button">
+      <i class="fa fa-chevron-up scroll-top-arrow" aria-hidden="true"></i>
+    </a>
+  
+
+  
+    <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+  
+
+  <footer class="mt-5">
+  <div class="text-center py-3">
+    <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><b>Hexo</b></a>
+    <i class="iconfont icon-love"></i>
+    <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"> <b>Fluid</b></a>
+    <br>
+
+    
+  
+    <!-- 不蒜子统计PV -->
+    
+    &nbsp;<span id="busuanzi_container_site_pv"></span>总访问量 
+          <span id="busuanzi_value_site_pv"></span> 次&nbsp;
+  
+  
+    <!-- 不蒜子统计UV -->
+    
+    &nbsp;<span id="busuanzi_container_site_uv"></span>总访客数 
+            <span id="busuanzi_value_site_uv"></span> 人&nbsp;
+  
+  <br>
+
+
+
+    
+
+
+    <!-- cnzz Analytics icon -->
+    
+
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="/lib/jquery/jquery.min.js" ></script>
+<script src="/lib/popper/popper.min.js" ></script>
+<script src="/lib/bootstrap/js/bootstrap.min.js" ></script>
+<script src="/lib/mdbootstrap/js/mdb.min.js" ></script>
+<script src="/js/main.js" ></script>
+
+
+  <script src="/js/lazyload.js" ></script>
+
+
+
+  
+    <script src="/lib/tocbot/tocbot.min.js" ></script>
+  
+  <script src="/js/post.js" ></script>
+
+
+
+  <script src="/lib/smoothscroll/SmoothScroll.min.js" ></script>
+
+
+
+  <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+<!-- Plugins -->
+
+
+  
+    <!-- Baidu Analytics -->
+    <script>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?eb31920f21c71831b27971912292a850";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+    <!-- Google Analytics -->
+    <script>
+      (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r;
+        i[r] = i[r] || function () {
+          (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date();
+        a = s.createElement(o),
+          m = s.getElementsByTagName(o)[0];
+        a.async = 1;
+        a.src = g;
+        m.parentNode.insertBefore(a, m)
+      })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+
+      ga('create', 'UA-159845815-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+  
+
+  
+
+  
+
+  <!-- cnzz Analytics -->
+  
+
+
+
+  <script src="/lib/prettify/prettify.min.js" ></script>
+  <script>
+    $(document).ready(function () {
+      $('pre').addClass('prettyprint  linenums');
+      prettyPrint();
+    })
+  </script>
+
+
+
+  <script src="/lib/typed/typed.min.js" ></script>
+  <script>
+    var typed = new Typed('#subtitle', {
+      strings: [
+        '  ',
+        "Java 8 Optional最佳实践&nbsp;",
+      ],
+      cursorChar: "_",
+      typeSpeed: 70,
+      loop: false,
+    });
+    typed.stop();
+    $(document).ready(function () {
+      $(".typed-cursor").addClass("h2");
+      typed.start();
+    });
+  </script>
+
+
+
+  <script src="/lib/anchor/anchor.min.js" ></script>
+  <script>
+    anchors.options = {
+      placement: "right",
+      visible: "false",
+      
+    };
+    var el = "h1,h2,h3,h4,h5,h6".split(",");
+    var res = [];
+    for (item of el) {
+      res.push(".markdown-body > " + item)
+    }
+    anchors.add(res.join(", "))
+  </script>
+
+
+
+  <script src="/js/local-search.js" ></script>
+  <script>
+    var path = "/local-search.xml";
+    var inputArea = document.querySelector("#local-search-input");
+    inputArea.onclick = function () {
+      getSearchFile(path);
+      this.onclick = null
+    }
+  </script>
+
+
+
+  <script src="/lib/fancybox/jquery.fancybox.min.js" ></script>
+  <script>
+    $("#post img:not(.no-zoom img, img[no-zoom])").each(
+      function () {
+        var element = document.createElement("a");
+        $(element).attr("data-fancybox", "images");
+        $(element).attr("href", $(this).attr("src"));
+        $(this).wrap(element);
+      }
+    );
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
